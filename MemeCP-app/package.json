@@ -2,7 +2,7 @@
   "name": "MemeCP-app",
   "version": "0.0.1",
   "private": true,
-  "description": "Alpic MCP Server Template",
+  "description": "Contextual meme replies for confusing or frustrating AI conversations.",
   "type": "module",
   "scripts": {
     "dev": "skybridge dev",

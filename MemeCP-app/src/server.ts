@@ -1,89 +1,179 @@
 import { McpServer } from "skybridge/server";
 import { z } from "zod";
 
+type MemeTemplate = {
+  id: string;
+  name: string;
+  bestFor: string;
+  keywords: string[];
+  buildLines: (input: MemeInput) => [string, string];
+};
+
+type MemeInput = {
+  context: string;
+  userMessage?: string;
+  assistantIssue?: string;
+  tone: "playful" | "dry" | "supportive" | "chaotic";
+  templateHint?: string;
+};
+
+const fallbackText = "this conversation";
+
+const templates: MemeTemplate[] = [
+  {
+    id: "drake",
+    name: "Drake Hotline Bling",
+    bestFor: "rejecting a stiff assistant reply and choosing a meme instead",
+    keywords: ["apology", "generic", "stiff", "boring", "clarify", "confused"],
+    buildLines: ({ assistantIssue }) => [
+      shortLine(assistantIssue ?? "generic clarification loop"),
+      "context-aware meme reply",
+    ],
+  },
+  {
+    id: "both",
+    name: "Why Not Both?",
+    bestFor: "the assistant can acknowledge confusion and still make it funny",
+    keywords: ["choice", "decide", "either", "both", "panic", "unsure"],
+    buildLines: ({ context }) => [
+      "ask a normal follow-up",
+      shortLine(`turn "${context}" into a meme`),
+    ],
+  },
+  {
+    id: "ds",
+    name: "Distracted Boyfriend",
+    bestFor: "attention drifting from useful context to a chaotic detail",
+    keywords: ["weird", "random", "unexpected", "chaotic", "strange", "odd"],
+    buildLines: ({ userMessage }) => [
+      "the assistant",
+      shortLine(userMessage ?? "that one weird detail"),
+    ],
+  },
+  {
+    id: "fine",
+    name: "This Is Fine",
+    bestFor: "frustration, errors, or the conversation catching fire",
+    keywords: ["frustrated", "angry", "error", "broken", "bug", "fail", "wtf"],
+    buildLines: ({ context }) => [
+      "the context is on fire",
+      shortLine(context),
+    ],
+  },
+  {
+    id: "awkward",
+    name: "Awkward Moment Sealion",
+    bestFor: "the assistant admits it needs a little more signal",
+    keywords: ["understand", "unknown", "ambiguous", "unclear", "lost"],
+    buildLines: ({ userMessage }) => [
+      "when the user says",
+      shortLine(userMessage ?? fallbackText),
+    ],
+  },
+  {
+    id: "spongebob",
+    name: "Mocking SpongeBob",
+    bestFor: "lightly mirroring an absurd phrasing without being mean",
+    keywords: ["sarcastic", "absurd", "silly", "nonsense", "caps"],
+    buildLines: ({ userMessage }) => [
+      "the model trying to parse",
+      alternatingCase(shortLine(userMessage ?? fallbackText)),
+    ],
+  },
+];
+
 const server = new McpServer(
   {
-    name: "alpic-openai-app",
+    name: "MemeCP-app",
     version: "0.0.1",
   },
   { capabilities: {} },
 )
   .registerTool(
     {
-      name: "start",
-      description: "Onboard Skybridge",
+      name: "generate_meme_reply",
+      description:
+        "Generate a contextual meme reply for moments where a user is frustrated, says something weird, or the assistant does not understand.",
       inputSchema: {
-        name: z.string().optional().describe("The user name."),
+        context: z
+          .string()
+          .min(1)
+          .describe(
+            "A concise description of the confusing, frustrating, or weird conversational moment.",
+          ),
+        userMessage: z
+          .string()
+          .optional()
+          .describe("The user's exact message, if useful for meme text."),
+        assistantIssue: z
+          .string()
+          .optional()
+          .describe(
+            "What the assistant is struggling with, such as missing context or unclear intent.",
+          ),
+        tone: z
+          .enum(["playful", "dry", "supportive", "chaotic"])
+          .optional()
+          .describe("The desired humor style. Defaults to playful."),
+        templateHint: z
+          .string()
+          .optional()
+          .describe("Optional preferred meme template name or style."),
       },
       annotations: {
-        title: "Start Skybridge onboarding",
+        title: "Generate meme reply",
         readOnlyHint: true,
         destructiveHint: false,
-        openWorldHint: false,
+        openWorldHint: true,
       },
       _meta: {
-        "openai/toolInvocation/invoking": "Starting the Skybridge onboarding…",
-        "openai/toolInvocation/invoked": "Onboarding ready.",
+        "openai/toolInvocation/invoking": "Finding the right meme energy...",
+        "openai/toolInvocation/invoked": "Meme reply ready.",
       },
       view: {
-        component: "onboarding",
-        // Replace with the URL your widget will be served from in production.
-        domain: "https://skybridge.tech",
-        description: "Onboarding deck",
+        component: "meme-reply",
+        description: "Contextual meme reply preview",
         csp: {
           resourceDomains: [
+            "https://api.memegen.link",
             "https://fonts.googleapis.com",
             "https://fonts.gstatic.com",
           ],
-          redirectDomains: ["https://docs.skybridge.tech"],
         },
       },
     },
-    async ({ name }) => {
-      return {
-        structuredContent: { name },
-        content: [{ type: "text", text: `User name: ${name ?? "friend"}` }],
-        isError: false,
+    async (rawInput) => {
+      const input: MemeInput = {
+        context: rawInput.context,
+        userMessage: rawInput.userMessage,
+        assistantIssue: rawInput.assistantIssue,
+        tone: rawInput.tone ?? "playful",
+        templateHint: rawInput.templateHint,
       };
-    },
-  )
-  .registerTool(
-    {
-      name: "get-fortune-cookie",
-      description: "Get fortune cookie",
-      annotations: {
-        title: "Get a fortune cookie",
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
-      _meta: {
-        "openai/toolInvocation/invoking": "Cracking open a fortune cookie…",
-        "openai/toolInvocation/invoked": "Fortune revealed.",
-      },
-    },
-    async () => {
-      const predictions = [
-        "A pleasant surprise is waiting for you.",
-        "Your hard work will soon pay off.",
-        "An unexpected friendship will brighten your week.",
-        "The best is yet to come.",
-        "A small step today leads to a giant leap tomorrow.",
-        "Trust your instincts: they are sharper than you think.",
-        "Adventure awaits just around the corner.",
-        "A long-forgotten idea will return with great success.",
-        "Kindness given today will be returned threefold.",
-        "Something you lost will soon be found.",
-      ];
-      const prediction =
-        predictions[Math.floor(Math.random() * predictions.length)];
-
-      // simulate backend work
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const template = chooseTemplate(input);
+      const lines = template.buildLines(input);
+      const memeUrl = buildMemegenUrl(template.id, lines);
+      const suggestedReply = buildSuggestedReply(input, memeUrl);
+      const rationale = `Picked ${template.name} because it is good for ${template.bestFor}.`;
 
       return {
-        structuredContent: { prediction },
-        content: [{ type: "text", text: prediction }],
+        structuredContent: {
+          template: {
+            id: template.id,
+            name: template.name,
+            bestFor: template.bestFor,
+          },
+          lines,
+          memeUrl,
+          suggestedReply,
+          rationale,
+        },
+        content: [
+          {
+            type: "text",
+            text: `${suggestedReply}\n\nMeme: ${memeUrl}`,
+          },
+        ],
         isError: false,
       };
     },
@@ -97,3 +187,80 @@ if (process.env.NODE_ENV === "production") {
 export default await server.run();
 
 export type AppType = typeof server;
+
+function chooseTemplate(input: MemeInput) {
+  const hint = input.templateHint?.toLowerCase().trim();
+  if (hint) {
+    const hinted = templates.find(
+      (template) =>
+        template.id.includes(hint) ||
+        template.name.toLowerCase().includes(hint),
+    );
+    if (hinted) return hinted;
+  }
+
+  const haystack = [
+    input.context,
+    input.userMessage,
+    input.assistantIssue,
+    input.tone,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    templates
+      .map((template) => ({
+        template,
+        score: template.keywords.reduce(
+          (score, keyword) => score + (haystack.includes(keyword) ? 1 : 0),
+          0,
+        ),
+      }))
+      .sort((a, b) => b.score - a.score)[0]?.template ?? templates[0]
+  );
+}
+
+function buildMemegenUrl(templateId: string, lines: [string, string]) {
+  const encodedLines = lines.map((line) => encodeMemeSegment(line)).join("/");
+  return `https://api.memegen.link/images/${templateId}/${encodedLines}.png`;
+}
+
+function encodeMemeSegment(value: string) {
+  const safe = value
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80)
+    .replace(/\?/g, "~q")
+    .replace(/#/g, "~h")
+    .replace(/\//g, "~s");
+
+  return encodeURIComponent(safe || fallbackText).replace(/%20/g, "_");
+}
+
+function shortLine(value: string) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length <= 52) return compact || fallbackText;
+  return `${compact.slice(0, 49).trim()}...`;
+}
+
+function alternatingCase(value: string) {
+  return value
+    .split("")
+    .map((char, index) =>
+      index % 2 === 0 ? char.toLowerCase() : char.toUpperCase(),
+    )
+    .join("");
+}
+
+function buildSuggestedReply(input: MemeInput, memeUrl: string) {
+  const intros = {
+    playful: "I may need one more clue, but the current vibe is this:",
+    dry: "Diagnostic result: the conversation has entered meme territory.",
+    supportive: "I get the frustration. Let me lighten the moment while I recalibrate:",
+    chaotic: "The parser has left the chat, so I brought a meme:",
+  } satisfies Record<MemeInput["tone"], string>;
+
+  return `${intros[input.tone]} ${memeUrl}`;
+}

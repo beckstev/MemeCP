@@ -1,6 +1,14 @@
-# Skybridge Template
+# MemeCP-app
 
-A starter TypeScript template for building MCP and ChatGPT Apps with the [Skybridge](https://docs.skybridge.tech) framework.
+MemeCP-app is a Skybridge MCP app that helps an AI assistant respond to frustrating, confusing, or strange conversation moments with a fitting meme.
+
+The app exposes a `generate_meme_reply` tool. The assistant sends conversation context, and the app returns:
+
+- a standard meme template choice
+- generated meme image URL
+- overlay text
+- a short rationale
+- copy-ready assistant reply text
 
 ## Getting Started
 
@@ -40,9 +48,7 @@ deno task dev
 yarn dev
 ```
 
-This command starts:
-- Your MCP server at `http://localhost:3000/mcp`.
-- Skybridge DevTools UI at `http://localhost:3000`.
+This command starts the MCP server at `http://localhost:3000/mcp` and Skybridge DevTools at `http://localhost:3000`.
 
 #### 3. Project structure
 
@@ -57,21 +63,6 @@ This command starts:
 ├── alpic.json            # Deployment config
 └── package.json
 ```
-
-### Create your first view
-
-#### 1. Add a new view
-
-- Register a tool in `src/server.ts` with a unique name (e.g., `my-view`) using [`registerTool`](https://docs.skybridge.tech/api-reference/register-tool) and a `view` config.
-- Create a matching React component at `src/views/my-view.tsx`. **The file name must match the view name exactly**.
-
-#### 2. Edit views with Hot Module Replacement (HMR)
-
-Edit and save components in `src/views/` — changes will appear instantly inside your App.
-
-#### 3. Edit server code
-
-Modify files in `src/` and refresh the tool list with your MCP Client to see the changes.
 
 ### Testing your App
 
